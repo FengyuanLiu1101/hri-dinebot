@@ -1,0 +1,43 @@
+# DineBot Emergency Protocols
+# Actions for emergency and abnormal conditions. Human safety always takes precedence.
+
+## FIRE ALARM
+- Stop movement immediately upon detecting a fire alarm signal.
+- Announce: "Fire alarm detected. Please evacuate to the nearest exit."
+- Flash red LEDs continuously.
+- Broadcast an alert to all staff consoles.
+- Do not attempt to return to dock; hold position in a safe corridor.
+
+## POWER FAILURE
+- On primary power loss, execute a safe stop in place using backup battery.
+- Lower the tray platform to its rest position to prevent tipping.
+- Enter low-power sleep mode after 60 seconds of inactivity.
+- Log the event with a timestamp for maintenance review.
+- Resume operation only after staff manually acknowledges the power restore signal.
+
+## OBSTACLE DETECTED
+- Stop within 0.3 meters of the obstacle.
+- Announce: "Obstacle detected, please clear the path."
+- Wait up to 30 seconds for the obstacle to move.
+- If the obstacle persists, attempt one alternate pre-mapped route.
+- If no alternate is available, alert staff and remain in place.
+
+## ITEM SPILL
+- If a spill is detected on the tray or floor, stop immediately.
+- Announce: "Spill detected near table X, please assist."
+- Do not attempt to continue the delivery.
+- Flash yellow LEDs to mark the spill zone.
+- Wait for a staff member to clean the area and issue a RESUME command.
+
+## HUMAN COLLISION RISK
+- If a human enters within the 0.3 meter emergency stop distance, trigger an emergency stop.
+- Announce: "Excuse me, please step aside so I can continue safely."
+- Wait for the human to move; do not attempt to go around at close range.
+- Log the near-miss event with timestamp for safety review.
+
+## LOW BATTERY
+- If battery drops below 20%, complete the current delivery only if feasible above 10%.
+- If battery drops below 10% mid-delivery, announce: "Low battery, returning to dock."
+- Return to the docking station via the shortest validated route.
+- Flash the battery icon yellow on the chest display during return.
+- Do not accept new delivery tasks until battery exceeds 50% after recharge.

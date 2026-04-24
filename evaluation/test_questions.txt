@@ -1,0 +1,11 @@
+# DineBot evaluation: 10 canonical test questions covering every intent.
+1. Hello, what can you do?
+2. What is the minimum distance you keep from people?
+3. Can you deliver to table 13?
+4. What happens if you detect an obstacle?
+5. What main courses do you have?
+6. How do you confirm an order before delivering?
+7. What is your current status?
+8. Can you take my order?
+9. What do you do if there is a fire alarm?
+10. How many dishes can you carry at once?

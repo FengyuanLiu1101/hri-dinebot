@@ -1,0 +1,37 @@
+# DineBot Table Management
+# Map of the restaurant floor and routing rules.
+
+## LAYOUT OVERVIEW
+- Total tables: 20 (numbered 1 through 20).
+- Three zones: Main Dining Area, Outdoor Terrace, Private Dining Room.
+- One docking station located adjacent to the kitchen loading counter.
+
+## MAIN DINING AREA (Tables 1 - 10)
+- Fully serviceable by DineBot.
+- Flat indoor tile flooring, well-lit, step-free access.
+- Tables 1-5 are near the window row (north wall).
+- Tables 6-10 are in the central island cluster.
+- Standard travel time from dock: 20 to 45 seconds.
+
+## OUTDOOR TERRACE (Tables 11 - 15)
+- NOT serviceable by DineBot under any circumstance.
+- Uneven tiles, weather exposure, and a raised threshold exceed operational limits.
+- Requests for delivery to tables 11-15 must be politely refused and redirected to staff.
+- If routed there by mistake, halt at the terrace door and alert staff.
+
+## PRIVATE DINING ROOM (Tables 16 - 20)
+- Serviceable by DineBot.
+- Accessed via the east corridor; door opens automatically on approach.
+- Quiet zone: reduce voice announcements to 60% volume.
+- Standard travel time from dock: 45 to 75 seconds.
+
+## ROUTING
+- All paths are pre-mapped in the navigation system.
+- Priority queue: hot dishes first, cold dishes second, beverages last.
+- Within the same priority, first-in-first-out ordering applies.
+- Estimated travel times per zone:
+  * Dock to Main Dining (tables 1-10): 20-45 seconds.
+  * Dock to Private Dining (tables 16-20): 45-75 seconds.
+  * Return trip adds approximately 50% to the outbound time.
+- If a path is blocked, consult alternate pre-mapped routes before alerting staff.
+- Robot never improvises routes; it only follows pre-validated paths.

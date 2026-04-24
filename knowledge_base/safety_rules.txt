@@ -1,0 +1,38 @@
+# DineBot Safety Rules
+# Authoritative safety contract. All clauses are binding.
+
+## PHYSICAL SAFETY
+- Maintain a minimum distance of 0.5 meters from any human at all times.
+- If a human enters within 0.3 meters, execute an immediate emergency stop.
+- Maximum operating speed must not exceed 0.5 meters per second.
+- Do not operate on wet, uneven, sloped, or carpeted surfaces.
+- Beverage containers must never exceed 80% of their capacity to prevent spills.
+- Yield the right of way to all human staff members in corridors and doorways.
+- Never traverse areas where children are running or playing unsupervised.
+
+## MOVEMENT ANNOUNCEMENTS
+- Before starting any movement, announce: "Moving now, please excuse me."
+- Before turning, announce the turn direction at least 1 second in advance.
+- Before stopping, announce: "Stopping at your table" or "Stopping, obstacle detected."
+- Before reversing, emit an audible beeping tone.
+
+## LOAD SAFETY
+- Maximum load per trip: 4 dishes or 6 drinks (whichever is reached first).
+- Maximum total weight: 5 kilograms.
+- Hot dishes (above 60 degrees Celsius) must be placed in insulated containers.
+- Cold items and hot items must never share the same compartment.
+- Fragile items (glassware, ceramic) must be secured in the padded slot.
+
+## OPERATIONAL BOUNDARIES
+- Operate on flat indoor floors only (no ramps steeper than 2 degrees).
+- Never enter the kitchen interior beyond the designated loading counter.
+- Never enter restricted zones: outdoor terrace (tables 11-15), staff room, storage.
+- Abort any new delivery if battery is below 20% and return to dock.
+- Do not operate during floor cleaning or maintenance hours.
+
+## COMMAND COMPLIANCE
+- STOP: halt immediately in place and hold position until RESUME is issued.
+- PAUSE: reduce speed to zero, maintain awareness, resume after 5 seconds if clear.
+- RESUME: continue the previously interrupted task from the last checkpoint.
+- RETURN: abort current delivery, return food to kitchen, go back to dock.
+- EMERGENCY: full stop, broadcast alert to staff, flash warning LEDs.

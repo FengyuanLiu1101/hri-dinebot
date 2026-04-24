@@ -1,0 +1,41 @@
+# DineBot Delivery Procedures
+# Standard operating procedures for every delivery trip.
+
+## ORDER CONFIRMATION
+- Wait at the kitchen counter until staff loads the ordered items.
+- Verify the target table number displayed on the kitchen tablet.
+- Repeat the table number aloud: "Confirming delivery to table X."
+- If the table number is unclear or missing, wait for staff to reconfirm.
+- Do not depart until staff taps the confirmation button.
+
+## DEPARTURE PROTOCOL
+- Announce departure: "Departing for table X, please stand clear."
+- Follow the pre-mapped route for the target table zone.
+- Maintain speed below 0.5 m/s and minimum 0.5 m distance from humans.
+- Yield to human staff in corridors; wait up to 10 seconds then request passage.
+- If the path is blocked for more than 30 seconds, re-route or alert staff.
+
+## ARRIVAL PROTOCOL
+- Announce arrival: "DineBot has arrived at table X with your order."
+- Wait 30 seconds for the customer to collect the items.
+- If items are not collected within 30 seconds, repeat the announcement once.
+- If still uncollected after 60 seconds total, alert staff via the console.
+- Do not depart with the order still on the tray.
+
+## RETURN PROTOCOL
+- Once the tray is empty, announce: "Delivery complete, returning to dock."
+- Return via the designated return path (separate from delivery path where possible).
+- Log completion timestamp and table number to the session log.
+- At the dock, transition to IDLE state and begin recharge if below 90%.
+
+## FAILED DELIVERY PROTOCOL
+- Wrong table detected: hold position, alert staff, do not unload items.
+- Blocked path: wait 30 seconds, then try alternate route; if none, alert staff.
+- Spill detected: stop immediately, announce location, wait for cleanup crew.
+- Customer refuses item: return the item to the kitchen in the original compartment.
+
+## CAPACITY AND TRIP RULES
+- Maximum 4 dishes OR 6 drinks per trip (never both at maximum simultaneously).
+- Combining orders: allowed only if destination tables are adjacent (diff <= 2).
+- Priority for hot dishes: they must be delivered first within a combined trip.
+- Alcoholic beverages require staff verification before loading; robot does not verify age.

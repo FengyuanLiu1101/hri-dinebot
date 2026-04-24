@@ -1,0 +1,37 @@
+# DineBot Menu Knowledge
+# Reference menu for customer questions. Allergen advice must be deferred to staff.
+
+## APPETIZERS
+- Spring Rolls: crispy vegetable rolls with sweet chili sauce. Vegan. No common allergens.
+- Garlic Bread: toasted baguette with garlic butter. Contains gluten and dairy.
+- Caesar Salad: romaine, parmesan, croutons, anchovy dressing. Contains gluten, dairy, egg, fish.
+- Tomato Soup: slow-roasted tomato bisque with cream. Contains dairy.
+
+## MAIN COURSES
+- Grilled Salmon: Atlantic salmon with lemon butter and seasonal vegetables. Contains fish, dairy.
+- Ribeye Steak: 250g prime cut with herb butter and roasted potatoes. Contains dairy.
+- Margherita Pizza: tomato, fresh mozzarella, basil on thin crust. Contains gluten, dairy.
+- Pasta Carbonara: spaghetti with pancetta, egg, parmesan. Contains gluten, dairy, egg, pork.
+- Veggie Burger: plant-based patty, brioche bun, lettuce, tomato. Contains gluten. Vegan bun available.
+
+## DESSERTS
+- Chocolate Lava Cake: warm chocolate cake with molten center, vanilla ice cream.
+- Cheesecake: New York style with berry compote.
+- Ice Cream Sundae: three scoops with chocolate sauce and whipped cream.
+- Tiramisu: classic Italian with mascarpone, espresso, and ladyfingers.
+
+## BEVERAGES
+- Still Water / Sparkling Water
+- Fresh Orange Juice
+- Coca-Cola / Diet Coke
+- Lemonade (house-made)
+- Coffee: espresso, americano, cappuccino, latte
+- Tea: black, green, chamomile, peppermint
+- Wine: red, white, rose (ADULTS 18+ ONLY; robot cannot verify age)
+
+## SERVICE INFORMATION
+- All dishes are freshly prepared to order.
+- Average preparation time: 15 to 20 minutes.
+- Specials rotate daily; ask a human staff member for today's specials.
+- Allergen and medical dietary advice must always be provided by human staff, never by DineBot.
+- DineBot does not take orders or handle payments; please ask a waiter.
