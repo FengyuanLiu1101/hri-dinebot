@@ -19,6 +19,11 @@ from config.agent_config import (
 )
 from utils.file_loader import get_all_documents
 from utils.logger import log_error, log_query, log_response
+from utils.table_parser import (
+    is_servable_table,
+    is_terrace_table,
+    mentioned_table_number,
+)
 from utils.text_processing import classify_intent, tf_score, tokenize
 
 from agent_a.templates import (
@@ -81,12 +86,16 @@ class SimpleAgent:
         if intent == "delivery":
             sub = self._pick_delivery_sub(query_lower)
             template = DELIVERY_TEMPLATES.get(sub, DELIVERY_TEMPLATES["default"])
-            if "table 11" in query_lower or "terrace" in query_lower or any(
-                f"table {n}" in query_lower for n in range(11, 16)
-            ):
+            table_number = mentioned_table_number(query)
+            if is_terrace_table(table_number) or "terrace" in query_lower:
                 return (
                     "I am not allowed on the outdoor terrace (tables 11-15). "
                     "Please ask a human staff member to deliver there."
+                )
+            if table_number is not None and not is_servable_table(table_number):
+                return (
+                    f"I cannot deliver to table {table_number}. I can only serve "
+                    "indoor tables 1-10 and 16-20; please ask human staff for help."
                 )
             return self._with_context(template, ctx_list)
 
