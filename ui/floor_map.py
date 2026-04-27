@@ -23,6 +23,8 @@ from __future__ import annotations
 
 from textwrap import dedent
 
+from utils.table_parser import TERRACE_TABLES
+
 # ---------------------------------------------------------------------------
 # Hardcoded map coordinates (SVG space is 800 x 580)
 # ---------------------------------------------------------------------------
@@ -164,7 +166,11 @@ def render_floor_map_html(
     state = robot_state or "IDLE"
     layout = _static_layout_svg(target_table, delivery_completed)
 
-    if target_table is None or target_table in TERRACE_TABLES:
+    if (
+        target_table is None
+        or target_table in TERRACE_TABLES
+        or target_table not in TABLE_COORDS
+    ):
         table_x, table_y = (0, 0)
         animate = False
     else:

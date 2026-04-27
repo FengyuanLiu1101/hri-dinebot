@@ -19,6 +19,12 @@ from __future__ import annotations
 import re
 from textwrap import dedent
 
+from utils.table_parser import (
+    is_servable_table,
+    mentioned_table_number,
+    target_table_from_text as parse_target_table,
+)
+
 ROBOT_STATES: list[str] = [
     "IDLE",
     "LOADING",
@@ -72,7 +78,13 @@ def compute_state(
     deliver_keywords = (
         "deliver", "bring", "carry", "take to table", "send to table",
     )
-    if any(kw in u for kw in deliver_keywords) or re.search(r"\btable\s*\d+\b", u):
+    mentioned_table = mentioned_table_number(u)
+    if mentioned_table is not None:
+        if is_servable_table(mentioned_table):
+            return "DELIVERING"
+        return current_state or "IDLE"
+
+    if any(kw in u for kw in deliver_keywords):
         return "DELIVERING"
 
     return current_state or "IDLE"
@@ -80,16 +92,7 @@ def compute_state(
 
 def target_table_from_text(text: str) -> int | None:
     """Pull a table number from a message; ``None`` if absent or out of range."""
-    if not text:
-        return None
-    match = re.search(r"table\s*(\d{1,2})", text.lower())
-    if not match:
-        return None
-    try:
-        n = int(match.group(1))
-    except ValueError:
-        return None
-    return n if 1 <= n <= 20 else None
+    return parse_target_table(text)
 
 
 def _robot_svg(state: str, battery: float) -> str:
