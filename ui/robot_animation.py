@@ -117,6 +117,10 @@ def _robot_svg(state: str, battery: float) -> str:
               <stop offset="0%" stop-color="#ffffff" stop-opacity="0.9"/>
               <stop offset="100%" stop-color="#00d4aa" stop-opacity="0.0"/>
             </radialGradient>
+            <!-- Clip the chest screen so the STATE label can never spill out. -->
+            <clipPath id="chestClip">
+              <rect x="112" y="182" width="136" height="56" rx="8"/>
+            </clipPath>
           </defs>
 
           <ellipse cx="180" cy="340" rx="110" ry="10" fill="#000" opacity="0.45"/>
@@ -157,11 +161,15 @@ def _robot_svg(state: str, battery: float) -> str:
 
             <rect x="110" y="180" width="140" height="60" rx="10"
                   fill="#0d1117" stroke="#00d4aa" stroke-width="2"/>
-            <text x="180" y="208" text-anchor="middle" font-family="Orbitron, sans-serif"
-                  font-size="14" fill="#00d4aa" letter-spacing="2">STATE</text>
-            <text x="180" y="230" text-anchor="middle" font-family="Orbitron, sans-serif"
-                  font-size="16" fill="#e6edf3" letter-spacing="2"
-                  class="screen-state">{state_label}</text>
+            <g clip-path="url(#chestClip)">
+              <text x="180" y="202" text-anchor="middle" dominant-baseline="central"
+                    font-family="Orbitron, sans-serif" font-size="10"
+                    fill="#00d4aa" letter-spacing="2">STATE</text>
+              <text x="180" y="222" text-anchor="middle" dominant-baseline="central"
+                    font-family="Orbitron, sans-serif" font-size="11"
+                    fill="#e6edf3" letter-spacing="1"
+                    class="screen-state">{state_label}</text>
+            </g>
 
             <g class="battery-badge" transform="translate(138,250)">
               <rect x="0" y="0" width="44" height="16" rx="3" fill="none"

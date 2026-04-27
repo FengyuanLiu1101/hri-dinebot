@@ -457,10 +457,19 @@ def render_left_panel() -> None:
 
     state = ss.robot_state
     state_desc = ROBOT_STATES.get(state, "")
+    # Render the status card in three separate markdown blocks so the
+    # label, the state pill, and the description never share a baseline
+    # (Streamlit's markdown will otherwise sometimes inline them).
+    st.markdown('<div class="side-card">', unsafe_allow_html=True)
     st.markdown(
-        '<div class="side-card">'
-        '<div class="side-title">Robot Status</div>'
-        f'<div class="state-pill {state}">{state.replace("_", " ")}</div>'
+        '<div class="side-title">Robot Status</div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        f'<div class="state-pill {state}">{state.replace("_", " ")}</div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(
         f'<div style="color:#8b949e;font-size:11px;margin-top:4px">{state_desc}</div>'
         "</div>",
         unsafe_allow_html=True,
@@ -508,7 +517,7 @@ def render_center_panel() -> None:
         delivery_completed=(ss.robot_state == "WAITING"),
         trigger_id=ss.map_trigger,
     )
-    components.html(floor_html, height=680, scrolling=False)
+    components.html(floor_html, height=620, scrolling=False)
 
     inject_chat_css()
     render_agent_badge(ss.selected_agent)

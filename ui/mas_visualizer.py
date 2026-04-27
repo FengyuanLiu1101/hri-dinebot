@@ -349,21 +349,35 @@ def inject_mas_css() -> None:
           .mas-pipeline {
             display: flex; flex-direction: column; gap: 6px;
             margin-bottom: 14px;
+            width: 100%;
           }
           .mas-box {
             background: #161b22; border: 1px solid #222c37;
             border-radius: 12px; padding: 10px 12px;
             transition: all 0.3s ease;
             position: relative;
+            width: 100%; max-width: 100%;
+            box-sizing: border-box;
+            overflow: hidden;
           }
           .mas-box-head {
             display: flex; align-items: center; gap: 8px;
             font-family: 'Orbitron', sans-serif; font-size: 12px;
             color: #e6edf3; letter-spacing: 2px;
+            min-width: 0;
           }
-          .mas-icon { font-size: 16px; }
-          .mas-title { flex: 1; }
-          .mas-sub { font-size: 11px; color: #8b949e; margin-top: 4px; }
+          .mas-icon { font-size: 16px; flex-shrink: 0; }
+          .mas-title {
+            flex: 1; min-width: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+          .mas-sub {
+            font-size: 11px; color: #8b949e; margin-top: 4px;
+            overflow: hidden; text-overflow: ellipsis;
+            word-wrap: break-word;
+          }
 
           .mas-retriever.mas-active   { border-color: #00d4aa; box-shadow: 0 0 0 2px rgba(0,212,170,0.25); }
           .mas-generator.mas-active   { border-color: #1f6feb; box-shadow: 0 0 0 2px rgba(31,111,235,0.3); }
@@ -439,17 +453,26 @@ def inject_mas_css() -> None:
           }
 
           .mas-metrics {
-            display: grid; grid-template-columns: repeat(5, 1fr);
+            display: grid;
+            grid-template-columns: repeat(5, minmax(80px, 1fr));
             gap: 6px; margin-top: 10px;
           }
           .mm {
             background: #161b22; border: 1px solid #222c37;
             border-radius: 8px; padding: 6px 4px; text-align: center;
+            min-width: 80px;
+            overflow: hidden;
           }
-          .mm-lbl { color: #8b949e; font-family: 'Orbitron', sans-serif;
-                    font-size: 9px; letter-spacing: 2px; }
-          .mm-val { color: #00d4aa; font-family: 'Orbitron', sans-serif;
-                    font-size: 16px; font-weight: 700; margin-top: 2px; }
+          .mm-lbl {
+            color: #8b949e; font-family: 'Orbitron', sans-serif;
+            font-size: 9px; letter-spacing: 2px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+          }
+          .mm-val {
+            color: #00d4aa; font-family: 'Orbitron', sans-serif;
+            font-size: 16px; font-weight: 700; margin-top: 2px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+          }
 
           @keyframes masPulse  { 0%,100% { transform: translateY(0); }
                                  50%     { transform: translateY(-2px); } }

@@ -9,18 +9,21 @@ This module renders an 800x580 SVG top-down floor plan with:
 * Private dining room (right, tables 16-20 in a 1x5 column, wall separator).
 * Outdoor terrace (top-right, tables 11-15, hatched and marked restricted).
 * A teal robot dot with a "DineBot" label that moves smoothly along the
-  delivery path via JavaScript ``setTimeout`` sequencing.
-* A three-segment animated dashed path
-  DOCK -> KITCHEN (blue) -> TARGET TABLE (teal) -> DOCK (orange) that
-  highlights the active phase, shades upcoming segments, and fades the
-  full path out two seconds after arrival at the dock.
+  waypoint-routed delivery path via JavaScript ``setTimeout`` chaining.
+* A three-segment animated dashed polyline path that follows the
+  restaurant's aisle corridors instead of cutting straight through tables:
+  DOCK -> KITCHEN (blue, "load"),
+  KITCHEN -> TABLE (teal, "deliver"),
+  TABLE -> DOCK (orange, "return").
 
 The public entry point is :func:`render_floor_map_html`, intended for
-``streamlit.components.v1.html``.
+``streamlit.components.v1.html``. Use a component height of 620 to avoid
+clipping the 580-tall SVG plus the surrounding card chrome.
 """
 
 from __future__ import annotations
 
+import math
 from textwrap import dedent
 
 from utils.table_parser import TERRACE_TABLES
@@ -30,6 +33,15 @@ from utils.table_parser import TERRACE_TABLES
 # ---------------------------------------------------------------------------
 DOCK_XY: tuple[int, int] = (400, 520)
 KITCHEN_XY: tuple[int, int] = (400, 60)
+
+# Corridor waypoints (aisle-following routing) ------------------------------
+# These let the robot travel around tables instead of through them.
+DOCK: tuple[int, int]         = (400, 520)
+MAIN_AISLE_S: tuple[int, int] = (400, 460)  # main vertical aisle, south end
+MAIN_AISLE_N: tuple[int, int] = (400, 140)  # main vertical aisle, north end
+KITCHEN: tuple[int, int]      = (400, 60)
+LEFT_AISLE: tuple[int, int]   = (200, 300)  # aisle between tables 1-4 and 5-8
+RIGHT_AISLE: tuple[int, int]  = (500, 300)  # aisle between main area and private
 
 TABLE_COORDS: dict[int, tuple[int, int]] = {
     1:  (80, 180),  2:  (160, 180),
@@ -48,10 +60,84 @@ _SVG_W = 800
 _SVG_H = 580
 
 
+# ---------------------------------------------------------------------------
+# Waypoint routing
+# ---------------------------------------------------------------------------
+def _zone_aisle(table_number: int) -> tuple[int, int] | None:
+    """Return the corridor waypoint to traverse for a given table, if any."""
+    if 1 <= table_number <= 8:
+        return LEFT_AISLE
+    if 9 <= table_number <= 10:
+        return None  # tables 9-10 sit beside the main aisle directly
+    if 16 <= table_number <= 20:
+        return RIGHT_AISLE
+    return None
+
+
+def get_load_route() -> list[tuple[int, int]]:
+    """Waypoints for the loading phase: dock -> kitchen."""
+    return [DOCK, MAIN_AISLE_S, MAIN_AISLE_N, KITCHEN]
+
+
+def get_deliver_route(table_number: int) -> list[tuple[int, int]]:
+    """Waypoints for the delivery phase: kitchen -> table N."""
+    target = TABLE_COORDS.get(table_number)
+    if target is None:
+        return [KITCHEN]
+    aisle = _zone_aisle(table_number)
+    waypoints: list[tuple[int, int]] = [KITCHEN, MAIN_AISLE_N]
+    if aisle is not None:
+        waypoints.append(aisle)
+    waypoints.append(target)
+    return waypoints
+
+
+def get_return_route(table_number: int) -> list[tuple[int, int]]:
+    """Waypoints for the return phase: table N -> dock."""
+    target = TABLE_COORDS.get(table_number)
+    if target is None:
+        return [DOCK]
+    aisle = _zone_aisle(table_number)
+    waypoints: list[tuple[int, int]] = [target]
+    if aisle is not None:
+        waypoints.append(aisle)
+    waypoints.extend([MAIN_AISLE_S, DOCK])
+    return waypoints
+
+
+def get_route(table_number: int) -> list[tuple[int, int]]:
+    """Return the full ordered list of waypoints for a delivery to ``table_number``.
+
+    The list covers the whole round trip: dock -> kitchen (loading),
+    kitchen -> table (delivery), and table -> dock (return), with the
+    appropriate corridor aisles inserted to keep the robot off of any
+    table footprint.
+    """
+    load = get_load_route()
+    deliver = get_deliver_route(table_number)
+    ret = get_return_route(table_number)
+    # Drop duplicates at segment boundaries (KITCHEN, TABLE).
+    return load + deliver[1:] + ret[1:]
+
+
+def _polyline_points(points: list[tuple[int, int]]) -> str:
+    return " ".join(f"{x},{y}" for x, y in points)
+
+
+def _polyline_length(points: list[tuple[int, int]]) -> float:
+    total = 0.0
+    for (x1, y1), (x2, y2) in zip(points, points[1:]):
+        total += math.hypot(x2 - x1, y2 - y1)
+    return total
+
+
+# ---------------------------------------------------------------------------
+# Static SVG layout
+# ---------------------------------------------------------------------------
 def _table_rect(
     n: int, x: int, y: int, target: int | None, completed: bool
 ) -> str:
-    """Render a single table as a rounded rect + numeric label."""
+    """Render a single table as a rounded rect + centred numeric label."""
     is_terrace = n in TERRACE_TABLES
     is_target = target == n
     is_complete = completed and is_target
@@ -65,12 +151,15 @@ def _table_rect(
         classes.append("table-target")
 
     cls = " ".join(classes)
+    # Slightly larger rect (44x28) to keep the numeric label fully inside
+    # without overlapping the border, even with bold Orbitron digits.
     rect = (
-        f'<rect class="{cls}" x="{x - 20}" y="{y - 16}" width="40" height="32"'
+        f'<rect class="{cls}" x="{x - 22}" y="{y - 14}" width="44" height="28"'
         f' rx="6" ry="6" data-table-id="{n}"/>'
     )
     label = (
-        f'<text class="table-label" x="{x}" y="{y + 4}" text-anchor="middle"'
+        f'<text class="table-label" x="{x}" y="{y}" text-anchor="middle"'
+        f' dominant-baseline="central"'
         f' font-family="Orbitron, sans-serif" font-size="13" font-weight="700">'
         f"{n}</text>"
     )
@@ -118,7 +207,8 @@ def _static_layout_svg(
         <g class="kitchen">
           <rect x="{kitchen_x - 120}" y="{kitchen_y - 22}" width="240" height="44"
                 rx="6" fill="#161b22" stroke="#00d4aa" stroke-width="2"/>
-          <text x="{kitchen_x}" y="{kitchen_y + 6}" text-anchor="middle"
+          <text x="{kitchen_x}" y="{kitchen_y}" text-anchor="middle"
+                dominant-baseline="central"
                 font-family="Orbitron, sans-serif" font-size="13" fill="#00d4aa"
                 letter-spacing="2">KITCHEN (PICKUP COUNTER)</text>
         </g>
@@ -171,14 +261,17 @@ def render_floor_map_html(
         or target_table in TERRACE_TABLES
         or target_table not in TABLE_COORDS
     ):
-        table_x, table_y = (0, 0)
         animate = False
+        load_pts = get_load_route()
+        deliver_pts: list[tuple[int, int]] = []
+        return_pts: list[tuple[int, int]] = []
     else:
-        table_x, table_y = TABLE_COORDS[target_table]
         animate = True
+        load_pts = get_load_route()
+        deliver_pts = get_deliver_route(target_table)
+        return_pts = get_return_route(target_table)
 
     dock_x, dock_y = DOCK_XY
-    kitchen_x, kitchen_y = KITCHEN_XY
 
     # Emergency / low-battery override dot classes.
     dot_extra_class = ""
@@ -188,9 +281,21 @@ def render_floor_map_html(
         dot_extra_class = "low-battery"
 
     animate_js = "true" if animate else "false"
+    load_js = _polyline_points(load_pts) if load_pts else ""
+    deliver_js = _polyline_points(deliver_pts) if deliver_pts else ""
+    return_js = _polyline_points(return_pts) if return_pts else ""
+
+    # JS literal arrays of [x,y] waypoints for sequential setTimeout chaining.
+    def _js_array(points: list[tuple[int, int]]) -> str:
+        return "[" + ",".join(f"[{x},{y}]" for x, y in points) + "]"
+
+    load_arr = _js_array(load_pts)
+    deliver_arr = _js_array(deliver_pts) if deliver_pts else "[]"
+    return_arr = _js_array(return_pts) if return_pts else "[]"
 
     return (
-        "<!doctype html><html><head><meta charset='utf-8'/>"
+        "<!DOCTYPE html>"
+        "<html><head><meta charset='utf-8'/>"
         "<link href='https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700"
         "&family=Inter:wght@400;600&display=swap' rel='stylesheet'>"
         f"<style>{_FLOOR_CSS}</style></head><body>"
@@ -223,17 +328,17 @@ def render_floor_map_html(
         f"        </marker>"
         f"      </defs>"
         f"      {layout}"
-        f"      <!-- Three-segment delivery path -->"
+        f"      <!-- Three-segment delivery polyline (aisle-following) -->"
         f"      <g id='delivery-path' class='hidden'>"
-        f"        <path id='seg-load'    class='path-segment load'    "
-        f"              d='M {dock_x} {dock_y} L {kitchen_x} {kitchen_y}'"
-        f"              marker-mid='url(#arrowBlue)'/>"
-        f"        <path id='seg-deliver' class='path-segment deliver' "
-        f"              d='M {kitchen_x} {kitchen_y} L {table_x} {table_y}'"
-        f"              marker-mid='url(#arrowTeal)'/>"
-        f"        <path id='seg-return'  class='path-segment return'  "
-        f"              d='M {table_x} {table_y} L {dock_x} {dock_y}'"
-        f"              marker-mid='url(#arrowOrange)'/>"
+        f"        <polyline id='seg-load'    class='path-segment load'"
+        f"                  points='{load_js}'"
+        f"                  marker-mid='url(#arrowBlue)'/>"
+        f"        <polyline id='seg-deliver' class='path-segment deliver'"
+        f"                  points='{deliver_js}'"
+        f"                  marker-mid='url(#arrowTeal)'/>"
+        f"        <polyline id='seg-return'  class='path-segment return'"
+        f"                  points='{return_js}'"
+        f"                  marker-mid='url(#arrowOrange)'/>"
         f"      </g>"
         f"      <!-- Robot dot -->"
         f"      <g id='robot-marker' class='robot-marker {dot_extra_class}'"
@@ -247,20 +352,47 @@ def render_floor_map_html(
         f"</div>"
         f"<script>"
         f"(function() {{"
-        f"  const animate = {animate_js};"
-        f"  const triggerId = '{trigger_id}';"
-        f"  const dock     = [{dock_x}, {dock_y}];"
-        f"  const kitchen  = [{kitchen_x}, {kitchen_y}];"
-        f"  const table    = [{table_x}, {table_y}];"
-        f"  const marker   = document.getElementById('robot-marker');"
-        f"  const phaseLbl = document.getElementById('phase-label');"
-        f"  const pathG    = document.getElementById('delivery-path');"
-        f"  const segLoad  = document.getElementById('seg-load');"
-        f"  const segDlv   = document.getElementById('seg-deliver');"
-        f"  const segRet   = document.getElementById('seg-return');"
-        f"  function move(to, ms) {{"
-        f"    marker.style.transition = 'transform ' + (ms/1000) + 's ease-in-out';"
-        f"    marker.setAttribute('transform', 'translate(' + to[0] + ',' + to[1] + ')');"
+        f"  var animate    = {animate_js};"
+        f"  var triggerId  = '{trigger_id}';"
+        f"  var loadPts    = {load_arr};"
+        f"  var deliverPts = {deliver_arr};"
+        f"  var returnPts  = {return_arr};"
+        f"  var marker     = document.getElementById('robot-marker');"
+        f"  var phaseLbl   = document.getElementById('phase-label');"
+        f"  var pathG      = document.getElementById('delivery-path');"
+        f"  var segLoad    = document.getElementById('seg-load');"
+        f"  var segDlv     = document.getElementById('seg-deliver');"
+        f"  var segRet     = document.getElementById('seg-return');"
+        f"  function dist(a, b) {{"
+        f"    var dx = b[0] - a[0], dy = b[1] - a[1];"
+        f"    return Math.sqrt(dx*dx + dy*dy);"
+        f"  }}"
+        f"  function totalLen(pts) {{"
+        f"    var t = 0;"
+        f"    for (var i = 1; i < pts.length; i++) t += dist(pts[i-1], pts[i]);"
+        f"    return t;"
+        f"  }}"
+        f"  function moveAlong(pts, totalMs, startAtZero) {{"
+        f"    if (!pts || pts.length < 2) return;"
+        f"    var len = totalLen(pts);"
+        f"    if (len <= 0) return;"
+        f"    var elapsed = 0;"
+        f"    if (startAtZero) {{"
+        f"      marker.style.transition = 'none';"
+        f"      marker.setAttribute('transform',"
+        f"        'translate(' + pts[0][0] + ',' + pts[0][1] + ')');"
+        f"      void marker.getBoundingClientRect();"
+        f"    }}"
+        f"    for (var i = 1; i < pts.length; i++) {{"
+        f"      (function(target, legMs, startMs) {{"
+        f"        setTimeout(function() {{"
+        f"          marker.style.transition = 'transform ' + (legMs/1000) + 's linear';"
+        f"          marker.setAttribute('transform',"
+        f"            'translate(' + target[0] + ',' + target[1] + ')');"
+        f"        }}, startMs);"
+        f"      }})(pts[i], (dist(pts[i-1], pts[i]) / len) * totalMs, elapsed);"
+        f"      elapsed += (dist(pts[i-1], pts[i]) / len) * totalMs;"
+        f"    }}"
         f"  }}"
         f"  function setPhase(label, active) {{"
         f"    phaseLbl.textContent = label;"
@@ -269,6 +401,7 @@ def render_floor_map_html(
         f"    }});"
         f"    if (active === 'load')    {{ segLoad.classList.add('active'); segDlv.classList.add('upcoming'); segRet.classList.add('upcoming'); }}"
         f"    if (active === 'deliver') {{ segLoad.classList.add('done');   segDlv.classList.add('active');   segRet.classList.add('upcoming'); }}"
+        f"    if (active === 'wait')    {{ segLoad.classList.add('done');   segDlv.classList.add('done');     segRet.classList.add('upcoming'); }}"
         f"    if (active === 'return')  {{ segLoad.classList.add('done');   segDlv.classList.add('done');     segRet.classList.add('active'); }}"
         f"    if (active === 'done')    {{ segLoad.classList.add('done');   segDlv.classList.add('done');     segRet.classList.add('done'); }}"
         f"  }}"
@@ -278,14 +411,33 @@ def render_floor_map_html(
         f"  }}"
         f"  pathG.classList.remove('hidden');"
         f"  pathG.classList.remove('fading');"
-        f"  marker.setAttribute('transform', 'translate(' + dock[0] + ',' + dock[1] + ')');"
+        f"  // Timeline (per spec):"
+        f"  //   t=0s  LOADING    -> move dock -> kitchen along load polyline"
+        f"  //   t=3s  DELIVERING -> move kitchen -> table along deliver polyline"
+        f"  //   t=8s  WAITING    -> highlight target table"
+        f"  //   t=11s RETURNING  -> move table -> dock along return polyline"
+        f"  //   t=14s IDLE       -> reset highlights / fade out path"
         f"  setPhase('Phase 1 / 3 - Loading at kitchen', 'load');"
-        f"  setTimeout(function() {{ move(kitchen, 2000); }}, 50);"
-        f"  setTimeout(function() {{ setPhase('Phase 2 / 3 - Delivering to table', 'deliver'); move(table, 3000); }}, 2100);"
-        f"  setTimeout(function() {{ setPhase('Phase 3 / 3 - Returning to dock',  'return');  move(dock,  2000); }}, 5200);"
-        f"  setTimeout(function() {{ setPhase('Delivery complete', 'done'); }}, 7300);"
-        f"  setTimeout(function() {{ pathG.classList.add('fading'); }}, 8000);"
-        f"  setTimeout(function() {{ pathG.classList.add('hidden'); phaseLbl.textContent = 'Idle at dock'; }}, 10000);"
+        f"  moveAlong(loadPts,    2800, true);"
+        f"  setTimeout(function() {{"
+        f"    setPhase('Phase 2 / 3 - Delivering to table', 'deliver');"
+        f"    moveAlong(deliverPts, 4800, false);"
+        f"  }}, 3000);"
+        f"  setTimeout(function() {{"
+        f"    setPhase('Waiting at table', 'wait');"
+        f"  }}, 8000);"
+        f"  setTimeout(function() {{"
+        f"    setPhase('Phase 3 / 3 - Returning to dock', 'return');"
+        f"    moveAlong(returnPts, 2800, false);"
+        f"  }}, 11000);"
+        f"  setTimeout(function() {{"
+        f"    setPhase('Delivery complete', 'done');"
+        f"  }}, 14000);"
+        f"  setTimeout(function() {{ pathG.classList.add('fading'); }}, 14500);"
+        f"  setTimeout(function() {{"
+        f"    pathG.classList.add('hidden');"
+        f"    phaseLbl.textContent = 'Idle at dock';"
+        f"  }}, 16500);"
         f"  void triggerId;"
         f"}})();"
         f"</script>"
@@ -326,7 +478,7 @@ html, body {
   font-size: 11px; letter-spacing: 2px;
   transition: all 0.4s ease;
 }
-#floor-svg { width: 100%; height: 580px; display: block; }
+#floor-svg { width: 100%; height: 560px; display: block; }
 
 .zone-main    { fill: #0f1620; stroke: rgba(31,111,235,0.35); stroke-width: 1.5; }
 .zone-private { fill: #0f1620; stroke: rgba(63,185,80,0.35);  stroke-width: 1.5; }
@@ -376,15 +528,15 @@ html, body {
 #delivery-path.hidden { display: none; }
 #delivery-path.fading { opacity: 0; transition: opacity 2s ease-out; }
 .path-segment {
-  fill: none; stroke-width: 3; stroke-linecap: round;
+  fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round;
   stroke-dasharray: 8 6; opacity: 0.4;
-  transition: opacity 0.4s ease, stroke-dashoffset 0.6s linear;
+  transition: opacity 0.4s ease;
 }
 .path-segment.load    { stroke: var(--blue); }
 .path-segment.deliver { stroke: var(--accent); }
 .path-segment.return  { stroke: var(--orange); }
 .path-segment.active  { opacity: 1; animation: marchingAnts 1s linear infinite; stroke-width: 4; }
-.path-segment.done    { opacity: 1; stroke-dasharray: 0; }
+.path-segment.done    { opacity: 0.85; stroke-dasharray: 0; }
 .path-segment.upcoming{ opacity: 0.35; }
 
 @keyframes marchingAnts { from { stroke-dashoffset: 0; } to { stroke-dashoffset: -28; } }
@@ -399,3 +551,22 @@ html, body {
 [data-state="EMERGENCY"]   .robot-aura { animation: auraPulse 0.7s ease-out infinite; }
 [data-state="LOW_BATTERY"] .robot-aura { animation: auraPulse 2.4s ease-out infinite; }
 """
+
+
+__all__ = [
+    "TERRACE_TABLES",
+    "TABLE_COORDS",
+    "DOCK_XY",
+    "KITCHEN_XY",
+    "DOCK",
+    "MAIN_AISLE_S",
+    "MAIN_AISLE_N",
+    "KITCHEN",
+    "LEFT_AISLE",
+    "RIGHT_AISLE",
+    "get_route",
+    "get_load_route",
+    "get_deliver_route",
+    "get_return_route",
+    "render_floor_map_html",
+]
