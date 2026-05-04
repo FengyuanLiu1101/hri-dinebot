@@ -221,7 +221,8 @@ def render_robot_html(state: str, battery: float = 100.0) -> str:
         "<link href='https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700"
         "&family=Inter:wght@400;600&display=swap' rel='stylesheet'>"
         f"<style>{css}</style></head><body>"
-        f"<div class='stage' data-state='{state}'>"
+        f"<div class='stage' data-state='{state}' "
+        f"style='height:100%;min-height:100%;overflow:visible;box-sizing:border-box'>"
         f"  <div class='robot-card'>"
         f"    <div class='card-title'>"
         f"      <span>DineBot Unit</span>"
@@ -244,11 +245,14 @@ _ROBOT_CSS = """
 }
 * { box-sizing: border-box; }
 html, body {
-  margin: 0; padding: 0;
+  margin: 0; padding: 0; height: 100%;
   background: radial-gradient(1000px 500px at 30% -10%, #16232f 0%, var(--bg) 60%, #05070a 100%);
-  color: var(--text); font-family: 'Inter', sans-serif; overflow: hidden;
+  color: var(--text); font-family: 'Inter', sans-serif; overflow: visible;
 }
-.stage { width: 100%; padding: 12px; }
+.stage {
+  width: 100%; height: 100%; min-height: 100%;
+  padding: 12px; box-sizing: border-box; overflow: visible;
+}
 .robot-card {
   background: var(--card); border: 1px solid #222c37; border-radius: 18px;
   padding: 14px;

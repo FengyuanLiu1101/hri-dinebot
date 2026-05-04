@@ -498,30 +498,13 @@ def inject_mas_css() -> None:
 def render_panel(
     trace_log: list[dict[str, Any]] | None,
     metrics: dict[str, Any] | None,
-    agent_letter: str,
 ) -> None:
-    """Render the full right-panel for the given agent.
-
-    When Agent A is active the panel shows a simple explanatory card
-    instead of the MAS trace, since Agent A has no sub-agents.
-    """
+    """Render the MAS trace right panel (Agent B). ``app.render_right_panel`` skips this for Agent A."""
     inject_mas_css()
     st.markdown(
         '<div class="mas-panel-title">MAS Live Trace</div>',
         unsafe_allow_html=True,
     )
-
-    if agent_letter.upper() == "A":
-        st.markdown(
-            '<div class="mas-box mas-done">'
-            '<div class="mas-box-head"><span class="mas-icon">&#9889;</span>'
-            '<span class="mas-title">AGENT A (RULE-BASED)</span></div>'
-            '<div class="mas-sub">No Multi-Agent System in rule-based mode. '
-            'Switch to Agent B to see the live retriever / generator / critic pipeline.</div>'
-            '</div>',
-            unsafe_allow_html=True,
-        )
-        return
 
     render_pipeline(trace_log or [])
     st.markdown(

@@ -25,9 +25,11 @@ Key features
 
 from __future__ import annotations
 
+import json
 import os
 import sys
 import time
+from html import escape
 from pathlib import Path
 
 # Project root on path so `import config.*` works when Streamlit launches
@@ -70,10 +72,13 @@ st.set_page_config(
 # Global theming
 # ---------------------------------------------------------------------------
 def inject_global_css() -> None:
-    st.markdown(
-        """
-        <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Inter:wght@400;600&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
-        <style>
+    """Apply global theme + @keyframes via ``components.html``.
+
+    ``st.markdown`` sanitizes ``@keyframes`` in some Streamlit versions; a
+    zero-height component injects the stylesheet into the parent document so
+    animations (EMERGENCY / LOW_BATTERY pills) still run.
+    """
+    css_content = """
           .stApp {
             background:
               radial-gradient(1200px 600px at 85% -10%, #122033 0%, transparent 60%),
@@ -172,9 +177,37 @@ def inject_global_css() -> None:
             color: #0d1117; font-weight: 700; border: none;
           }
           div[data-testid="stFormSubmitButton"] button:hover { filter: brightness(1.1); }
-        </style>
+    """
+    font_href = (
+        "https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700"
+        "&family=Inter:wght@400;600&family=Fira+Code:wght@400;500&display=swap"
+    )
+    js_css = json.dumps(css_content.strip())
+    js_font = json.dumps(font_href)
+    components.html(
+        f"""
+        <script>
+        (function() {{
+          try {{
+            var doc = window.parent.document;
+            if (doc.getElementById("dinebot-global-css")) return;
+            var st = doc.createElement("style");
+            st.id = "dinebot-global-css";
+            st.textContent = {js_css};
+            doc.head.appendChild(st);
+            if (!doc.querySelector('link[data-dinebot-fonts="1"]')) {{
+              var lk = doc.createElement("link");
+              lk.rel = "stylesheet";
+              lk.href = {js_font};
+              lk.setAttribute("data-dinebot-fonts", "1");
+              doc.head.appendChild(lk);
+            }}
+          }} catch (e) {{}}
+        }})();
+        </script>
         """,
-        unsafe_allow_html=True,
+        height=0,
+        scrolling=False,
     )
 
 
@@ -426,50 +459,45 @@ def render_left_panel() -> None:
         unsafe_allow_html=True,
     )
 
-    with st.container():
-        st.markdown('<div class="side-card">', unsafe_allow_html=True)
-        st.markdown('<div class="side-title">Agent Selector</div>', unsafe_allow_html=True)
-        choice = st.radio(
-            "Agent",
-            options=["A", "B"],
-            format_func=lambda x: ("Agent A" if x == "A" else "Agent B"),
-            index=0 if ss.selected_agent == "A" else 1,
-            horizontal=True,
-            label_visibility="collapsed",
-            key="agent_radio",
-            on_change=_on_agent_change,
-        )
-        if choice != ss.selected_agent:
-            ss.selected_agent = choice
-        letter = ss.selected_agent
-        label = (
-            "RULE-BASED | No API" if letter == "A"
-            else "RAG + MAS | GPT-4o-mini"
-        )
-        st.markdown(
-            f'<span class="agent-pill {letter}">{label}</span>',
-            unsafe_allow_html=True,
-        )
-        api_key = os.getenv("OPENAI_API_KEY", "").strip()
-        if letter == "B" and (not api_key or api_key == "your_api_key_here"):
-            st.warning("No OPENAI_API_KEY — Agent B is running offline-stub.")
-        st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown(
+        '<div class="side-card">'
+        '<div class="side-title">Agent Selector</div>'
+        "</div>",
+        unsafe_allow_html=True,
+    )
+    choice = st.radio(
+        "Agent",
+        options=["A", "B"],
+        format_func=lambda x: ("Agent A" if x == "A" else "Agent B"),
+        index=0 if ss.selected_agent == "A" else 1,
+        horizontal=True,
+        label_visibility="collapsed",
+        key="agent_radio",
+        on_change=_on_agent_change,
+    )
+    if choice != ss.selected_agent:
+        ss.selected_agent = choice
+    letter = ss.selected_agent
+    label = (
+        "RULE-BASED | No API" if letter == "A"
+        else "RAG + MAS | GPT-4o-mini"
+    )
+    st.markdown(
+        '<div class="side-card">'
+        f'<span class="agent-pill {letter}">{escape(label)}</span>'
+        "</div>",
+        unsafe_allow_html=True,
+    )
+    api_key = os.getenv("OPENAI_API_KEY", "").strip()
+    if letter == "B" and (not api_key or api_key == "your_api_key_here"):
+        st.warning("No OPENAI_API_KEY — Agent B is running offline-stub.")
 
     state = ss.robot_state
-    state_desc = ROBOT_STATES.get(state, "")
-    # Render the status card in three separate markdown blocks so the
-    # label, the state pill, and the description never share a baseline
-    # (Streamlit's markdown will otherwise sometimes inline them).
-    st.markdown('<div class="side-card">', unsafe_allow_html=True)
+    state_desc = escape(ROBOT_STATES.get(state, ""))
     st.markdown(
-        '<div class="side-title">Robot Status</div>',
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        f'<div class="state-pill {state}">{state.replace("_", " ")}</div>',
-        unsafe_allow_html=True,
-    )
-    st.markdown(
+        '<div class="side-card">'
+        '<div class="side-title">Robot Status</div>'
+        f'<div class="state-pill {state}">{escape(state.replace("_", " "))}</div>'
         f'<div style="color:#8b949e;font-size:11px;margin-top:4px">{state_desc}</div>'
         "</div>",
         unsafe_allow_html=True,
@@ -492,24 +520,30 @@ def render_left_panel() -> None:
         unsafe_allow_html=True,
     )
 
-    with st.container():
-        st.markdown('<div class="side-card">', unsafe_allow_html=True)
-        st.markdown('<div class="side-title">Controls</div>', unsafe_allow_html=True)
-        run_demo_clicked = st.button("Run Demo", use_container_width=True, key="btn_demo")
-        reset_clicked = st.button("Reset Session", use_container_width=True, key="btn_reset")
-        if run_demo_clicked:
-            _start_demo()
-            st.rerun()
-        if reset_clicked:
-            _reset_session()
-            st.rerun()
-        st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown(
+        '<div class="side-card">'
+        '<div class="side-title">Controls</div>'
+        "</div>",
+        unsafe_allow_html=True,
+    )
+    run_demo_clicked = st.button("Run Demo", use_container_width=True, key="btn_demo")
+    reset_clicked = st.button("Reset Session", use_container_width=True, key="btn_reset")
+    if run_demo_clicked:
+        _start_demo()
+        st.rerun()
+    if reset_clicked:
+        _reset_session()
+        st.rerun()
 
 
 def render_center_panel() -> None:
     ss = st.session_state
     robot_html = render_robot_html(ss.robot_state, ss.battery)
-    components.html(robot_html, height=420, scrolling=False)
+    components.html(robot_html, height=440, scrolling=False)
+    st.markdown(
+        '<div style="margin-bottom: 8px;"></div>',
+        unsafe_allow_html=True,
+    )
 
     floor_html = render_floor_map_html(
         robot_state=ss.robot_state,
@@ -517,7 +551,11 @@ def render_center_panel() -> None:
         delivery_completed=(ss.robot_state == "WAITING"),
         trigger_id=ss.map_trigger,
     )
-    components.html(floor_html, height=620, scrolling=False)
+    components.html(floor_html, height=640, scrolling=False)
+    st.markdown(
+        '<div style="margin-bottom: 8px;"></div>',
+        unsafe_allow_html=True,
+    )
 
     inject_chat_css()
     render_agent_badge(ss.selected_agent)
@@ -542,10 +580,21 @@ def render_center_panel() -> None:
 
 def render_right_panel() -> None:
     ss = st.session_state
+    if ss.selected_agent == "A":
+        st.markdown(
+            '<div class="side-card">'
+            '<div class="side-title">Agent A — Rule-Based</div>'
+            '<div style="color:#8b949e;font-size:12px;line-height:1.6">'
+            "No MAS trace available.<br>"
+            "Agent A uses keyword matching + TF-IDF retrieval.<br>"
+            "Switch to Agent B to see live RAG + Critic traces."
+            "</div></div>",
+            unsafe_allow_html=True,
+        )
+        return
     render_panel(
         trace_log=ss.mas_trace_log,
         metrics=ss.session_metrics,
-        agent_letter=ss.selected_agent,
     )
 
 

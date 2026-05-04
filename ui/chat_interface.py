@@ -8,10 +8,12 @@ a three-dot typing indicator, and an agent badge (A or B).
 
 from __future__ import annotations
 
+import json
 from html import escape
 from typing import Any
 
 import streamlit as st
+import streamlit.components.v1 as components
 
 # ---------------------------------------------------------------------------
 # Mini robot SVG avatar (matches the main robot head)
@@ -40,20 +42,22 @@ _USER_AVATAR_SVG = (
 
 
 def inject_chat_css() -> None:
-    """Inject chat-specific CSS (call once per render)."""
-    st.markdown(
-        """
-        <style>
+    """Inject chat-specific CSS (call once per render).
+
+    Uses ``components.html`` so ``@keyframes`` survive Streamlit markdown
+    sanitization; styles are applied to the parent document.
+    """
+    css = """
           .dinebot-chat {
             display: flex; flex-direction: column;
             gap: 10px;
-            max-height: 360px;
-            min-height: 120px;
-            overflow-y: auto;
+            min-height: 60px;
             padding: 8px 6px;
             background: #0d1117;
             border: 1px solid #222c37;
             border-radius: 14px;
+            flex: 1 1 auto;
+            min-width: 0;
           }
           .bubble-row { display: flex; align-items: flex-end; gap: 10px; animation: fadein 0.35s ease-out; }
           .bubble-row.user { flex-direction: row-reverse; }
@@ -115,9 +119,25 @@ def inject_chat_css() -> None:
             from { opacity: 0; transform: translateY(6px); }
             to   { opacity: 1; transform: translateY(0); }
           }
-        </style>
+    """
+    js_css = json.dumps(css.strip())
+    components.html(
+        f"""
+        <script>
+        (function() {{
+          try {{
+            var doc = window.parent.document;
+            if (doc.getElementById("dinebot-chat-css")) return;
+            var st = doc.createElement("style");
+            st.id = "dinebot-chat-css";
+            st.textContent = {js_css};
+            doc.head.appendChild(st);
+          }} catch (e) {{}}
+        }})();
+        </script>
         """,
-        unsafe_allow_html=True,
+        height=0,
+        scrolling=False,
     )
 
 
@@ -130,7 +150,7 @@ def render_agent_badge(agent_letter: str) -> None:
         else "Agent B - RAG + MAS | GPT-4o-mini"
     )
     st.markdown(
-        f'<span class="agent-badge {letter}">{label}</span>',
+        f'<span class="agent-badge {letter}">{escape(label)}</span>',
         unsafe_allow_html=True,
     )
 
@@ -149,24 +169,26 @@ def _bubble(role: str, content: str) -> str:
 
 def render_history(messages: list[dict[str, Any]]) -> None:
     """Render the full chat history as stacked bubbles."""
+    scroll_style = (
+        "max-height: 300px; overflow-y: auto; display: flex; flex-direction: column-reverse;"
+        "padding: 8px 0;"
+    )
     if not messages:
         st.markdown(
-            '<div class="dinebot-chat" style="align-items:center;justify-content:center;color:#8b949e">'
+            f'<div class="dinebot-chat" style="{scroll_style} '
+            'align-items:center;justify-content:center;color:#8b949e">'
             '<div style="padding:20px;text-align:center">'
             "Say hello to DineBot &middot; try <b>\"Deliver pizza to table 7\"</b>"
-            '</div></div>',
+            "</div></div>",
             unsafe_allow_html=True,
         )
         return
-    parts = ['<div class="dinebot-chat" id="dinebot-chat">']
-    for m in messages:
+    parts = [
+        f'<div class="dinebot-chat" id="dinebot-chat" style="{scroll_style}">',
+    ]
+    for m in reversed(messages):
         parts.append(_bubble(m.get("role", "robot"), m.get("content", "")))
     parts.append("</div>")
-    # Auto-scroll to bottom on each render.
-    parts.append(
-        "<script>(function(){var el=document.getElementById('dinebot-chat');"
-        "if(el){el.scrollTop=el.scrollHeight;}})();</script>"
-    )
     st.markdown("".join(parts), unsafe_allow_html=True)
 
 

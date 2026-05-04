@@ -17,7 +17,7 @@ This module renders an 800x580 SVG top-down floor plan with:
   TABLE -> DOCK (orange, "return").
 
 The public entry point is :func:`render_floor_map_html`, intended for
-``streamlit.components.v1.html``. Use a component height of 620 to avoid
+``streamlit.components.v1.html``. Use a component height of about 640 to avoid
 clipping the 580-tall SVG plus the surrounding card chrome.
 """
 
@@ -299,7 +299,8 @@ def render_floor_map_html(
         "<link href='https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700"
         "&family=Inter:wght@400;600&display=swap' rel='stylesheet'>"
         f"<style>{_FLOOR_CSS}</style></head><body>"
-        f"<div class='map-stage' data-state='{state}'>"
+        f"<div class='map-stage' data-state='{state}' "
+        f"style='height:100%;min-height:100%;overflow:visible;box-sizing:border-box'>"
         f"  <div class='map-card'>"
         f"    <div class='map-title'>"
         f"      <span>Restaurant Floor Map</span>"
@@ -456,10 +457,13 @@ _FLOOR_CSS = """
 }
 * { box-sizing: border-box; }
 html, body {
-  margin: 0; padding: 0; background: var(--bg); color: var(--text);
-  font-family: 'Inter', sans-serif; overflow: hidden;
+  margin: 0; padding: 0; height: 100%; background: var(--bg); color: var(--text);
+  font-family: 'Inter', sans-serif; overflow: visible;
 }
-.map-stage { padding: 12px; }
+.map-stage {
+  padding: 12px; height: 100%; min-height: 100%;
+  box-sizing: border-box; overflow: visible;
+}
 .map-card {
   background: var(--card); border: 1px solid #222c37; border-radius: 18px;
   padding: 14px;
